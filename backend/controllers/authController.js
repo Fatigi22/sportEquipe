@@ -1,42 +1,28 @@
-const User = require('../models/User');
-const generateToken = require('../config/jwtConfig');
-const bcrypt = require('bcrypt');
+const User = require("../models/User");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
 exports.register = async (req, res) => {
-    const { name, email, password, role } = req.body;
-    try {
-        const userExists = await User.findOne({ email });
-        if (userExists) return res.status(400).json({ message: 'Email used' });
-
-        const user = await User.create({ name, email, password, role });
-        res.status(201).json({
-            _id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            token: generateToken(user),
-        });
-    } catch (error) {
-        res.status(500).json({ message: 'Server error' });
-    }
+  try {
+    const user = new User(req.body);
+    await user.save();
+    res.status(201).json({ message: "Utilisateur créé" });
+  } catch (error) {
+    res.status(400).json({ error: "Erreur d'inscription" });
+  }
 };
 
 exports.login = async (req, res) => {
-    const { email, password } = req.body;
-    try {
-        const user = await User.findOne({ email });
-        if (user && (await bcrypt.compare(password, user.password))) {
-            res.json({
-                _id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                token: generateToken(user),
-            });
-        } else {
-            res.status(401).json({ message: 'Incorrect email or password' });
-        }
-    } catch (error) {
-        res.status(500).json({ message: 'Server error' });
-    }
+  try {
+    const user = await User.findOne({ email: req.body.email });
+    if (!user) return res.status(400).json({ error: "Utilisateur non trouvé" });
+
+    const validPassword = await bcrypt.compare(req.body.password, user.password);
+    if (!validPassword) return res.status(400).json({ error: "Mot de passe incorrect" });
+
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    res.json({ token });
+  } catch (error) {
+    res.status(500).json({ error: "Erreur serveur" });
+  }
 };

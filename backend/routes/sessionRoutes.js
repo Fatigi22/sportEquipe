@@ -1,12 +1,9 @@
-const express = require('express');
-const { authenticate, authorize } = require('../middlewares/authMiddleware');
-const { createSession, getSessions, updateSession, deleteSession } = require('../controllers/sessionController');
+const router = require("express").Router();
+const { authMiddleware, roleMiddleware } = require("../middlewares/authMiddleware");
+const sessions = require("../controllers/sessionController");
 
-const router = express.Router();
-
-router.post('/', authenticate, authorize(['trainer']), createSession);
-router.get('/', authenticate, getSessions);
-router.put('/:id', authenticate, authorize(['trainer']), updateSession);
-router.delete('/:id', authenticate, authorize(['trainer']), deleteSession);
+router.post("/", authMiddleware, roleMiddleware("entraineur"), sessions.createSession);
+router.get("/", authMiddleware, sessions.getSessions);
+router.post("/:id/book", authMiddleware, sessions.bookSession);
 
 module.exports = router;
